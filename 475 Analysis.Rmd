@@ -9,5 +9,59 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Setup
 
+#load packages
+library(quantmod)
+library(xts)
+
+start_date <- "1990-01-01"
+end_date <- "2010-10-01" # for windowing datasets
+
+```
+
+```{r}
+# Load primary dataset - Average airfares CONVERT TO DATAFRAME AS XTS IS A MATRIX OBJ
+airfare <- read.csv("Data/av_airfare.csv")
+cols <- c("REF_DATE", "GEO", "VALUE")
+airfare <- airfare[,cols] # remove all columns except cols
+names(airfare) <- c("REF_DATE", "City", "Airfare")
+
+airfare$REF_DATE <- paste(airfare$REF_DATE,"-01",sep="")
+airfare$REF_DATE <- as.Date(airfare$REF_DATE)
+airfare.xts <- as.xts(airfare)
+airfare.xts <- window(airfare.xts, start=start_date, end=end_date)
+airfare.xts$Airfare <- as.numeric(airfare.xts$Airfare)
+
+# drop Canada datapoints
+airfare.wo.ca <- airfare.xts[airfare.xts$City != "Canada",]
+
+# summary statistics
+summary(airfare.wo.ca$Airfare)
+print(c("Std Dev.: ", as.character(sd(airfare.wo.ca$Airfare))))
+
+# create collection of airports of interest
+
+
+```
+
+
+
+```{r}
+# load oil dataset
+
+wti <- getSymbols("WTISPLC", src = "FRED")
+wti <- window(WTISPLC, start=start_date, end=end_date)
+
+# convert to quarterly average
+wtiq <- apply.quarterly(wti,FUN = mean)
+
+# get summary stats
+summary(wtiq$WTISPLC)
+print(c("Std Dev.: ", as.character(sd(wtiq$WTISPLC))))
+```
+
+
+
+```{r}
+# line graph of domestic airfare over 2014 to 2023
 ```
 
