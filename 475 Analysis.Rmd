@@ -17,6 +17,7 @@ library(xts)
 library(tidyr)
 library(tidyverse)
 library(dplyr)
+library(stringi)
 
 
 ```
@@ -75,8 +76,135 @@ vars.of.int <- c("tot.hh", "inadq.pc", "unsuit.pc", "unafford.pc", "inadq",
 stats <- c("mean(x)", "sd(x)", "min(x)", "median(x)", "max(x)")
 stats.label <- c("Mean", "Std. Dev.", "Min", "Median", "Max")
 
-sumtable(housing.w, vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="latex")
+#sumtable(housing.w, vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="latex")
 ```
+
+```{r}
+census <- read.csv("C:\Users\marti\Documents\_ECO475 Term Paper\Data")
+```
+
+```{r}
+# Filter Census data to geos, variables of interest
+
+# characteristics/controls of interest
+chars_of_int <- c(1,2,3,1403,1526,6,80,81,244,
+                  360,1457,1458,1459,1460,
+                  1461,1462,1463,1464,2016,2017,
+                  2230) 
+census.f <- census %>% filter(GEO_LEVEL == "Census subdivision" & CHARACTERISTIC_ID %in% chars_of_int)
+
+# Grab only columns of interest
+cols_of_int <- c("DGUID", "GEO_NAME", "CHARACTERISTIC_ID", "CHARACTERISTIC_NAME",
+                 "C1_COUNT_TOTAL", "C10_RATE_TOTAL")
+census.f <- census.f[,cols_of_int]
+
+
+# Create value column. If population, use count var. Else, use rate
+census.f$VALUE <- NA
+
+for (i in 1:nrow(census.f)) {
+if (census.f[i,"CHARACTERISTIC_ID"] %in% c(1,2,3)) {
+  census.f[i,"VALUE"] <- census.f[i,"C1_COUNT_TOTAL"]
+} else {
+  census.f[i,"VALUE"] <- census.f[i,"C10_RATE_TOTAL"]
+}
+}
+
+```
+
+```{r}
+# Convert to wide
+## Change characteristic names so they are shorter and more manageable
+name.chg <- list(c("Population, 2021", "pop21"),
+                 c("Population, 2016", "pop16"),
+                 c("Population percentage change, 2016 to 2021", "pop_chg"),
+                 c("Population density per square kilometre", "pop_dens"),
+                 c("    Married couples", "married"),
+                 c("      With children", "marr_w_child"),
+                 c("  Median after-tax income of household in 2020 ($)", "med_at_inc"),
+                 c("Prevalence of low income based on the Low-income cut-offs, after tax (LICO-AT) (%)", "bel_lico"),
+                 c("  Indigenous identity", "indig"),
+                 c("  15 to 24 years", "15to24"),
+                 c("  25 to 34 years", "25to34"),
+                 c("  35 to 44 years", "35to44"),
+                 c("  45 to 54 years", "45to54"),
+                 c("  55 to 64 years", "55to64"),
+                 c("  65 to 74 years", "65to74"),
+                 c("  75 to 84 years", "75to84"),
+                 c("  85 years and over", "85_plus"),
+                 c("  Not Canadian citizens", "non_cdn"),
+                 c("  High (secondary) school diploma or equivalency certificate", "he_highshool"),
+                 c("  Postsecondary certificate, diploma or degree", "he_postsec"),
+                 c("Unemployment rate", "unemp"))
+
+for (name in name.chg) {
+  census.f[census.f$CHARACTERISTIC_NAME == name[1], "CHARACTERISTIC_NAME"] <- name[2]
+}
+
+## Create wide dataset
+census.w <- census.f %>% pivot_wider(id_cols=c("DGUID", "GEO_NAME"),
+                         names_from="CHARACTERISTIC_NAME", values_from="VALUE")
+
+# Merge with housing indicator set
+full.df <- left_join(housing.w, census.w, by=join_by(DGUID))
+
+```
+
+```{r}
+geo_list <- as.data.frame(unique(full.df$GEO_NAME))
+```
+
+```{r}
+# EXTRA VARIABLES TO CREATE
+## Indigenous reserve - if GEO_NAME contains (IRI)
+full.df$indig_res = 0
+for (i in 1:nrow(full.df)){
+  recoded_str <- as.character(full.df[i,"GEO_NAME"]) %>% iconv(from="utf-8", to="ascii")
+  sample_s <- str_sub(recoded_str, -6)
+  if (grepl("(IRI)", sample_s)) {
+    full.df[i,"indig_res"] <- 1
+  }
+} # the str_sub fcn does not like french accented characters. iconv converted the
+  # text to ascii which it did accept without issue. 
+
+## Pop size variables - <500, 500-1000, 1000-5000 etc.? Maybe do histogram of population
+
+## Provinces
+### Note: Province codes are a two-character string starting AFTER the first 9 "Fixed width" 
+### characters in the DGUID.
+provinces <- list(c(10, "NL"),
+                  c(11, "PEI"),
+                  c(12, "NS"),
+                  c(13, "NB"),
+                  c(24, "QC"),
+                  c(35, "ON"),
+                  c(46, "MB"),
+                  c(47, "SK"),
+                  c(48, "AB"),
+                  c(59, "BC"),
+                  c(60, "YT"),
+                  c(61, "NT"),
+                  c(62, "NU"))
+
+full.df$prov <- NA
+for (i in 1:nrow(full.df)){
+  pr_sub <- as.numeric(substr(full.df[i,"DGUID"], 10, 11))
+  for (j in provinces){
+    if (pr_sub == j[1]){
+      full.df[i,"prov"] <- j[2]
+    }
+  }
+}
+
+```
+
+```{r}
+### HELPER FUNCTIONS ###
+#function encode_dummy(data, new_var, logical) # use logical to code dummy variable new_var = 1
+
+
+```
+
 
 ```{}
 # SCRAP CODE
