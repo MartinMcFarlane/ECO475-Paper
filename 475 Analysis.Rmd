@@ -23,6 +23,10 @@ library(stringi)
 ```
 
 ```{r}
+##################################################
+## PART A: SETUP & DATA CLEANING                 #
+##################################################
+
 # Load primary dataset
 housing.raw <- read.csv("Data/housing_indicators_micro.csv")
 cols <- c("Census.year..2.", "GEO", "DGUID", "Housing.indicators..9.",
@@ -80,7 +84,7 @@ stats.label <- c("Mean", "Std. Dev.", "Min", "Median", "Max")
 ```
 
 ```{r}
-census <- read.csv("C:\Users\marti\Documents\_ECO475 Term Paper\Data")
+census <- read.csv("C:/Users/marti/Documents/_ECO475 Term Paper/Data/census_2021.csv")
 ```
 
 ```{r}
@@ -196,7 +200,60 @@ for (i in 1:nrow(full.df)){
   }
 }
 
+## Population Bins
+
+### Going to group as follows based on 2021 pop: 0 to <1000, 1000 to <2500, 
+### 2500 to <10000, 10000 to <50000, 50000 to <200000, >=200000
+
+### order: list(var_name, lower_bound, upper_bound)
+city_params <- list(
+  list("pop_bel_1k", 0, 1000),
+  list("pop_1k_2.5k", 1000, 2500),
+  list("pop_2.5k_10k", 2500, 10000),
+  list("pop_10k_50k", 10000, 50000),
+  list("pop_50k_200k", 50000, 200000),
+  list("pop_abv_200k", 200000, max(full.df$pop21, na.rm=TRUE) + 1) # max value plus 1 
+  ### because will use < for second value. see code below.
+)
+
+for (var in city_params){
+  col_nam <- as.character(var[1])
+  full.df[,col_nam] <- 0
+  for (i in 1:nrow(full.df)){
+    if(is.na(full.df[i,"pop21"])){
+      next
+    }
+    pop_val <- as.numeric(full.df[i,"pop21"])
+    if ((pop_val >= var[2]) & (pop_val < var[3])){
+      full.df[i,col_nam] <- 1
+    }
+  }
+}
+
 ```
+
+
+```{r}
+##################################################
+## PART B: ANALYSIS                              #
+##################################################
+
+# How do the housing indicators compare province-by-province? Use pop-based weights
+# and equal weight by subdivision to analyze differences?
+```
+
+```{r}
+# Regression analysis using Tobit model - housing indicators ~ pop size, covar's
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
 
 ```{r}
 ### HELPER FUNCTIONS ###
