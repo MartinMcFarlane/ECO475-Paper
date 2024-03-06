@@ -51,8 +51,10 @@ housing.w$Tenure[housing.w$Tenure == "Total - Tenure"] <- "Total"
 housing.w <- housing.w %>% filter(Tenure!="Government provided")
 
 # replace NAs with zeros
-housing.w <- housing.w %>% replace_na(list(tot.hh=0, inadq.pc=0.0, unsuit.pc=0.0, unafford.pc=0.0,
-                              core.nd=0, core.nd.pc=0.0, inadq=0, unsuit=0, unafford=0))
+
+housing.w <- housing.w %>% replace_na(list(tot.hh=0))
+#housing.w <- housing.w %>% replace_na(list(tot.hh=0, inadq.pc=0.0, unsuit.pc=0.0, unafford.pc=0.0,
+#                              core.nd=0, core.nd.pc=0.0, inadq=0, unsuit=0, unafford=0))
 
 # drop subdivisions where tot.hh for total tenure == 0
 housing.total <- filter(housing.w, Tenure == "Total" )
@@ -80,7 +82,7 @@ vars.of.int <- c("tot.hh", "inadq.pc", "unsuit.pc", "unafford.pc", "inadq",
 stats <- c("mean(x)", "sd(x)", "min(x)", "median(x)", "max(x)")
 stats.label <- c("Mean", "Std. Dev.", "Min", "Median", "Max")
 
-#sumtable(housing.w, vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="latex")
+sumtable(housing.w, vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="browser")
 ```
 
 ```{r}
@@ -168,7 +170,7 @@ for (i in 1:nrow(full.df)){
   if (grepl("(IRI)", sample_s)) {
     full.df[i,"indig_res"] <- 1
   }
-} # the str_sub fcn does not like french accented characters. iconv converted the
+} # the str_sub fcn does not like french accented characters. Function iconv converted the
   # text to ascii which it did accept without issue. 
 
 ## Pop size variables - <500, 500-1000, 1000-5000 etc.? Maybe do histogram of population
@@ -207,17 +209,20 @@ for (i in 1:nrow(full.df)){
 
 ### order: list(var_name, lower_bound, upper_bound)
 city_params <- list(
-  list("pop_bel_1k", 0, 1000),
-  list("pop_1k_2.5k", 1000, 2500),
-  list("pop_2.5k_10k", 2500, 10000),
-  list("pop_10k_50k", 10000, 50000),
-  list("pop_50k_200k", 50000, 200000),
-  list("pop_abv_200k", 200000, max(full.df$pop21, na.rm=TRUE) + 1) # max value plus 1 
+  list("pop_bel_1k", 0, 1000, "Below 1000"),
+  list("pop_1k_2.5k", 1000, 2500, "1000 to 2500"),
+  list("pop_2.5k_10k", 2500, 10000, "2500 to 10,000"),
+  list("pop_10k_50k", 10000, 50000, "10,000 to 50,000"),
+  list("pop_50k_200k", 50000, 200000, "50,000 to 200,000"),
+  list("pop_abv_200k", 200000, max(full.df$pop21, na.rm=TRUE) + 1, "over 200,000") # max value plus 1, see comment below 
   ### because will use < for second value. see code below.
 )
 
+full.df$pop.bin <- "" # Adding a category column for the dummies above to assist group_by's
+
 for (var in city_params){
   col_nam <- as.character(var[1])
+  cat_label <- as.character(var[4])
   full.df[,col_nam] <- 0
   for (i in 1:nrow(full.df)){
     if(is.na(full.df[i,"pop21"])){
@@ -226,10 +231,44 @@ for (var in city_params){
     pop_val <- as.numeric(full.df[i,"pop21"])
     if ((pop_val >= var[2]) & (pop_val < var[3])){
       full.df[i,col_nam] <- 1
+      full.df[i, "pop.bin"] <- cat_label
     }
   }
 }
 
+```
+
+```{r}
+# How many unsuitable NA values are there by population bin?
+
+
+full.df[full.df$Tenure == "Total",] %>%
+  group_by(pop.bin) %>%
+  summarise(sum_na = sum(is.na(unsuit)))
+
+sum(full.df$pop_1k_2.5k)
+# 3267/4740 observations below 1000 have NA for count of unsuitable housing...
+# whereas less than 10% of 1000 to 2500 have NAs
+
+```
+
+```{r}
+# If I drop all obs with NA unsuit, unafford, inadq, how many are left?
+df.no.nas <- full.df[!(is.na(full.df$unafford)),]
+df.no.nas <- df.no.nas[!(is.na(df.no.nas$unsuit)),]
+df.no.nas <- df.no.nas[!(is.na(df.no.nas$inadq)),]
+
+print(nrow(df.no.nas))
+
+# About 9786 out of 26913
+```
+```{r}
+# Distribution of NA rows by pop bin
+df.nas <- full.df[(is.na(full.df$unafford)),]
+df.nas <- df.nas[(is.na(df.nas$unsuit)),]
+df.nas <- df.nas[(is.na(df.nas$inadq)),]
+
+df.nas %>% ggplot(aes(x=pop.bin)) + geom_bar(fill="blue") + theme_classic()
 ```
 
 
@@ -243,10 +282,25 @@ for (var in city_params){
 ```
 
 ```{r}
-# Regression analysis using Tobit model - housing indicators ~ pop size, covar's
+# Regression analysis using OLS model - housing indicators ~ pop size, covar's
+# Do separate regressions for owner sample, renter sample, whole sample
+model.tot1 <- full.df[full.df$Tenure == "Total",] %>% lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k)
+summary(model.tot1)
 ```
 
 ```{r}
+# Rerun restricting to 2021 sample
+model.tot2021 <- full.df[(full.df$Tenure == "Total") & (full.df$Year == 2021),] %>% lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k)
+summary(model.tot2021)
+
+```
+
+
+```{r}
+# Distributions of the rates of the housing indicators
+
+## Unaffordable housing
+hist(housing.w$unafford.pc) # need to separate by tenure type
 
 ```
 
