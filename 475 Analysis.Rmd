@@ -285,7 +285,60 @@ df.nas %>% ggplot(aes(x=pop.bin)) + geom_bar(fill="blue") + theme_classic()
 
 # How do the housing indicators compare province-by-province? Use pop-based weights
 # and equal weight by subdivision to analyze differences?
+
+## Regress indicators in 2016 and 2021 separately by province 
+
+#df.no.nas$prov <- df.no.nas$prov %>% relevel(ref="ON") # set reference category to Ontario
+
+df.fltrd <- df.no.nas[(df.no.nas$Year == 2016) & (df.no.nas$Tenure == "Total"),]
+ml.prov16 <- df.fltrd %>%
+  lm(formula = unafford.pc ~ factor(prov), weights=pop16)
+
+df.fltrd <- df.no.nas[(df.no.nas$Year == 2021) & (df.no.nas$Tenure == "Total"),]
+ml.prov21 <- df.fltrd %>%
+  lm(formula = unafford.pc ~ factor(prov), weights=pop21)
+  
+## Build dataframe: province-year, expectation, confidence interval
+provs <- c("BC", "AB", "SK", "MB", "ON", "QC", "NB", "NS", "NL", "PEI")
+
+prov.ests16 <- data.frame(prov=provs, year=2016)
+predictions <- predict.lm(ml.prov16, newdata=prov.ests16, interval="confidence")
+prov.ests16 <- prov.ests16 %>% cbind(predictions)
+
+prov.ests21 <- data.frame(prov=provs, year=2021)
+predictions <- predict.lm(ml.prov21, newdata=prov.ests21, interval="confidence")
+prov.ests21 <- prov.ests21 %>% cbind(predictions)
+
+prov.ests <- prov.ests16 %>% rbind(prov.ests21)
+prov.ests$year <- as.character(prov.ests$year)
+
+## Plot bars with conf intervals
+ggplot(prov.ests, aes(x=prov, y=fit, fill=year)) +
+  geom_bar(stat="identity", position="dodge") +
+  geom_errorbar(aes(x=prov, ymin=lwr, ymax=upr), colour="black", position="dodge")
+
 ```
+
+```{r}
+# Relative frequency of population bins by province
+#df.gb <- df.no.nas[df.no.nas$Tenure == "Total", c("prov", "pop.bin")] %>% 
+#  group_by(prov, pop.bin) %>% summarise(count = n())
+df.gb <- df.no.nas[(df.no.nas$Tenure == "Total") & (!df.no.nas$prov %in% c("YT","NT","NU")),
+                   c("prov", "pop.bin")] %>% 
+  count(prov, pop.bin)
+# calculate relative frequencies
+df.gb$Total <- NA
+for (province in provs){
+  prov_total <- df.gb[df.gb$prov == province, "n"] %>% sum()
+  df.gb[df.gb$prov == province, "Total"] <- prov_total
+}
+df.gb <- df.gb %>% mutate(rel.frq = n / Total)
+
+
+# make plot
+df.gb %>% ggplot(aes(x=prov, y=rel.frq, fill=pop.bin)) + geom_bar(stat="identity", position="fill") #LATER: Order by west to east, population
+```
+
 
 ```{r}
 # Regression analysis using OLS model - housing indicators ~ pop size, covar's
@@ -339,7 +392,7 @@ model.tot3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
        med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp)
 
-summary(model.tot3)
+# summary(model.tot3)
 ```
 Income, population density and education controls eliminate mean differences between
 the population groups. Implies unaffordability not due to differences in population size per se,
@@ -356,7 +409,7 @@ model.tot4 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus)
 
-summary(model.tot4)
+# summary(model.tot4)
 ```
 Ages have negative association with housing affordability, controlling for the other factors. 
 But having children has a positive association...
@@ -370,7 +423,7 @@ model.tot5 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-summary(model.tot5)
+# summary(model.tot5)
 ```
 Provincial fixed effects eliminate significance of estimates for all population
 groupings except for 1K-2.5K group.
@@ -385,17 +438,74 @@ model.pop.chg <- df.2021 %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-summary(model.pop.chg)
+# summary(model.pop.chg)
 ```
 
 ```{r}
 ### Move to stargazer table
-stargazer(model.tot1, model.tot2, model.tot3, model.tot4, align=TRUE,
-          keep=c("pop_bel_1k","pop_1k_2.5k","pop_2.5k_10k","pop_10k_50k",
-                 "pop_50k_200k", "time", "non_cdn", "he_highschool", "he_postsec",
-                 "married", "marr_w_child"), column.sep.width = "0.1pt", font.size="scriptsize",
-          float.env="sidewaystable")
+#stargazer(model.tot1, model.tot2, model.tot3, model.tot4, align=TRUE,
+#          keep=c("pop_bel_1k","pop_1k_2.5k","pop_2.5k_10k","pop_10k_50k",
+#                 "pop_50k_200k", "time", "non_cdn", "he_highschool", "he_postsec",
+#                 "married", "marr_w_child"), column.sep.width = "0.1pt", font.size="scriptsize",
+#          float.env="sidewaystable")
 ```
+
+```{r}
+### TABLE 1: Change over time of indicators
+#### Total, no controls
+ml.tot1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Total, w/ controls
+ml.tot2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+#### Owner, no controls
+ml.own1 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Owner, w/ controls
+ml.own2 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+#### Renter, no controls
+ml.rent1 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Renter, w/ controls
+ml.rent2 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+
+stargazer(ml.tot1, ml.tot2, ml.own1, ml.own2, ml.rent1, ml.rent2, 
+          align=TRUE,
+          keep=c("pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
+                 "pop_50k_200k:time", "time"),
+          omit.stat = c("f","adj.rsq", "ser"),
+          column.sep.width = "1pt", 
+          font.size="scriptsize",
+          float.env="sidewaystable",
+          column.labels = c("Total Sample", "Homeowners", "Renters"),
+          column.separate = c(2,2,2),
+          notes = "Reference category: Population > 200,000")
+
+```
+
 
 
 ```{r}
