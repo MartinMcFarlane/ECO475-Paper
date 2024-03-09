@@ -18,6 +18,8 @@ library(tidyr)
 library(tidyverse)
 library(dplyr)
 library(stringi)
+library(estimatr)
+library(stargazer)
 
 
 ```
@@ -130,16 +132,16 @@ name.chg <- list(c("Population, 2021", "pop21"),
                  c("  Median after-tax income of household in 2020 ($)", "med_at_inc"),
                  c("Prevalence of low income based on the Low-income cut-offs, after tax (LICO-AT) (%)", "bel_lico"),
                  c("  Indigenous identity", "indig"),
-                 c("  15 to 24 years", "15to24"),
-                 c("  25 to 34 years", "25to34"),
-                 c("  35 to 44 years", "35to44"),
-                 c("  45 to 54 years", "45to54"),
-                 c("  55 to 64 years", "55to64"),
-                 c("  65 to 74 years", "65to74"),
-                 c("  75 to 84 years", "75to84"),
-                 c("  85 years and over", "85_plus"),
+                 c("  15 to 24 years", "age_15to24"),
+                 c("  25 to 34 years", "age_25to34"),
+                 c("  35 to 44 years", "age_35to44"),
+                 c("  45 to 54 years", "age_45to54"),
+                 c("  55 to 64 years", "age_55to64"),
+                 c("  65 to 74 years", "age_65to74"),
+                 c("  75 to 84 years", "age_75to84"),
+                 c("  85 years and over", "age_85_plus"),
                  c("  Not Canadian citizens", "non_cdn"),
-                 c("  High (secondary) school diploma or equivalency certificate", "he_highshool"),
+                 c("  High (secondary) school diploma or equivalency certificate", "he_highschool"),
                  c("  Postsecondary certificate, diploma or degree", "he_postsec"),
                  c("Unemployment rate", "unemp"))
 
@@ -173,7 +175,7 @@ for (i in 1:nrow(full.df)){
 } # the str_sub fcn does not like french accented characters. Function iconv converted the
   # text to ascii which it did accept without issue. 
 
-## Pop size variables - <500, 500-1000, 1000-5000 etc.? Maybe do histogram of population
+
 
 ## Provinces
 ### Note: Province codes are a two-character string starting AFTER the first 9 "Fixed width" 
@@ -236,6 +238,10 @@ for (var in city_params){
   }
 }
 
+## Time variable, 0 if 2016 and 1 if 2021
+full.df <- full.df %>%
+  mutate(time = ifelse(Year == 2021, 1, 0))
+
 ```
 
 ```{r}
@@ -284,15 +290,111 @@ df.nas %>% ggplot(aes(x=pop.bin)) + geom_bar(fill="blue") + theme_classic()
 ```{r}
 # Regression analysis using OLS model - housing indicators ~ pop size, covar's
 # Do separate regressions for owner sample, renter sample, whole sample
-model.tot1 <- full.df[full.df$Tenure == "Total",] %>% lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k)
-summary(model.tot1)
 ```
 
 ```{r}
-# Rerun restricting to 2021 sample
-model.tot2021 <- full.df[(full.df$Tenure == "Total") & (full.df$Year == 2021),] %>% lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k)
+# Regress restricting to 2016 and 2021 samples, drop where unafford == NA.
+# Use for reporting unweighted means of each community group, over time 
+
+model.tot2021 <- df.no.nas[(df.no.nas$Tenure == "Total") & (df.no.nas$Year == 2021),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k)
+
+print("FIRST REGRESSION")
 summary(model.tot2021)
 
+model.tot2016 <- df.no.nas[(df.no.nas$Tenure == "Total") & (df.no.nas$Year == 2016),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k)
+
+print("SECOND REGRESSION")
+summary(model.tot2016)
+```
+
+```{r}
+### MAIN Regression - How have housing indicators changed over time for each group ###
+
+## 1. UNAFFORDABLE HOUSING 
+### w/o size/year interactions
+model.tot1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time)
+
+summary(model.tot1)
+```
+
+
+```{r}
+### with interactions
+model.tot2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+summary(model.tot2)
+```
+Unconditional on covariates, change over the censuses of housing unaffordability  
+not statistically different from the change in Canada's largest cities. 
+
+```{r}
+### with covariates (non-family, age)
+model.tot3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp)
+
+summary(model.tot3)
+```
+Income, population density and education controls eliminate mean differences between
+the population groups. Implies unaffordability not due to differences in population size per se,
+but rather associated with income and education differences. I tried removing population density
+and mean differences returns to significance. Conditional on these controls, little to no differences
+in housing affordability for settlements > 10K people.
+
+```{r}
+### with family, age covariates
+model.tot4 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus)
+
+summary(model.tot4)
+```
+Ages have negative association with housing affordability, controlling for the other factors. 
+But having children has a positive association...
+
+```{r}
+### Fixed Effects with Indigenous community indicator
+model.tot5 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+summary(model.tot5)
+```
+Provincial fixed effects eliminate significance of estimates for all population
+groupings except for 1K-2.5K group.
+
+```{r}
+### One last check: restricted to 2021 sample, with % pop change as regressor
+df.2021 <- df.no.nas[(df.no.nas$Year == 2021),]
+
+model.pop.chg <- df.2021 %>% 
+  lm(formula = unafford.pc ~ pop_chg + pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+summary(model.pop.chg)
+```
+
+```{r}
+### Move to stargazer table
+stargazer(model.tot1, model.tot2, model.tot3, model.tot4, align=TRUE,
+          keep=c("pop_bel_1k","pop_1k_2.5k","pop_2.5k_10k","pop_10k_50k",
+                 "pop_50k_200k", "time", "non_cdn", "he_highschool", "he_postsec",
+                 "married", "marr_w_child"), column.sep.width = "0.1pt", font.size="scriptsize",
+          float.env="sidewaystable")
 ```
 
 
@@ -300,7 +402,14 @@ summary(model.tot2021)
 # Distributions of the rates of the housing indicators
 
 ## Unaffordable housing
-hist(housing.w$unafford.pc) # need to separate by tenure type
+hist.d <- df.no.nas[(df.no.nas$Tenure == "Total"),]
+hist(hist.d$unafford.pc, main="Total Sample, unafford.pc") # need to separate by tenure type
+
+hist.d <- df.no.nas[(df.no.nas$Tenure == "Owner"),]
+hist(hist.d$unafford.pc, main="Owner Sample, unafford.pc")
+
+hist.d <- df.no.nas[(df.no.nas$Tenure == "Renter"),]
+hist(hist.d$unafford.pc, main="Renter Sample, unafford.pc")
 
 ```
 
