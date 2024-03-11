@@ -75,17 +75,7 @@ for (i in 1:nrow(housing.total)) {
 
 ```
 
-```{r}
-# get summary statistics: group by year-tenure type
 
-vars.of.int <- c("tot.hh", "inadq.pc", "unsuit.pc", "unafford.pc", "inadq",
-                 "unsuit", "unafford")
-
-stats <- c("mean(x)", "sd(x)", "min(x)", "median(x)", "max(x)")
-stats.label <- c("Mean", "Std. Dev.", "Min", "Median", "Max")
-
-sumtable(housing.w, vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="browser")
-```
 
 ```{r}
 census <- read.csv("C:/Users/marti/Documents/_ECO475 Term Paper/Data/census_2021.csv")
@@ -370,7 +360,7 @@ summary(model.tot2016)
 model.tot1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time)
 
-summary(model.tot1)
+# summary(model.tot1)
 ```
 
 
@@ -380,7 +370,7 @@ model.tot2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
 
-summary(model.tot2)
+# summary(model.tot2)
 ```
 Unconditional on covariates, change over the censuses of housing unaffordability  
 not statistically different from the change in Canada's largest cities. 
@@ -451,81 +441,294 @@ model.pop.chg <- df.2021 %>%
 ```
 
 ```{r}
-### TABLE 1: Change over time of indicators
+### TABLE 1: Change over time of indicators, unaffordable
+
+### NOTE: model names shorten to m1, m2, etc. due to bug in stargazer not 
+### liking model names too long. 
+
 #### Total, no controls
-ml.tot1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
 
 #### Total, w/ controls
-ml.tot2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
        med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
+
+#### Total, w/ controls and population weights
+m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
 #### Owner, no controls
-ml.own1 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+m4 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
 
 #### Owner, w/ controls
-ml.own2 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
        med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
+#### Owner, w/ controls and population weights
+m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
 #### Renter, no controls
-ml.rent1 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+m7 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
 
 #### Renter, w/ controls
-ml.rent2 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
        med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
+#### Renter, w/ controls and pop weights
+m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
 
-stargazer(ml.tot1, ml.tot2, ml.own1, ml.own2, ml.rent1, ml.rent2, 
-          align=TRUE,
-          keep=c("pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
+
+stargazer(m1, m2, m3, m4, m5, m6, 
+          m7, m8, m9,
+          align=TRUE, type="text",
+          title = "Regression Estimates, Unaffordability",
+          keep=c("Constant","pop_bel_1k","pop_1k_2.5k","pop_2.5k_10k","pop_10k_50k","pop_50k_200k",
+                 "pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
                  "pop_50k_200k:time", "time"),
           omit.stat = c("f","adj.rsq", "ser"),
           column.sep.width = "1pt", 
           font.size="scriptsize",
           float.env="sidewaystable",
           column.labels = c("Total Sample", "Homeowners", "Renters"),
-          column.separate = c(2,2,2),
-          notes = "Reference category: Population > 200,000")
+          column.separate = c(3,3,3),
+          notes = "Reference category: Population > 200,000",
+          add.lines = list(c("Weights", "No", "No", "Yes", "No", "No", "Yes", "No", "No", "Yes"),
+                           c("Controls", "No", "Yes", "Yes", "No", "Yes", "Yes", "No", "Yes", "Yes")))
 
 ```
 
+```{r}
+### TABLE 2: Change over time of indicators, unsuitable
+#### Total, no controls
+m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
 
+#### Total, w/ controls
+m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+
+#### Total, w/ controls and population weights
+m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
+#### Owner, no controls
+m4 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Owner, w/ controls
+m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+#### Owner, w/ controls and population weights
+m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
+#### Renter, no controls
+m7 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Renter, w/ controls
+m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+#### Renter, w/ controls and pop weights
+m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
+
+stargazer(m1, m2, m3, m4, m5, m6, 
+          m7, m8, m9,
+          align=TRUE, type="text",
+          title = "Regression Estimates, Unsuitable Housing",
+          keep=c("Constant","pop_bel_1k","pop_1k_2.5k","pop_2.5k_10k","pop_10k_50k","pop_50k_200k",
+                 "pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
+                 "pop_50k_200k:time", "time"),
+          omit.stat = c("f","adj.rsq", "ser"),
+          column.sep.width = "1pt", 
+          font.size="scriptsize",
+          float.env="sidewaystable",
+          column.labels = c("Total Sample", "Homeowners", "Renters"),
+          column.separate = c(3,3,3),
+          notes = "Reference category: Population > 200,000",
+          add.lines = list(c("Weights", "No", "No", "Yes", "No", "No", "Yes", "No", "No", "Yes"),
+                           c("Controls", "No", "Yes", "Yes", "No", "Yes", "Yes", "No", "Yes", "Yes")))
+
+```
+
+```{r}
+### TABLE 3: Change over time of indicators, inadequate
+#### Total, no controls
+m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Total, w/ controls
+m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+
+#### Total, w/ controls and population weights
+m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
+#### Owner, no controls
+m4 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Owner, w/ controls
+m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+#### Owner, w/ controls and population weights
+m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
+#### Renter, no controls
+m7 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k)
+
+#### Renter, w/ controls
+m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov))
+
+#### Renter, w/ controls and pop weights
+m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_50k_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_50k_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov), weights=pop21)
+
+
+stargazer(m1, m2, m3, m4, m5, m6, 
+          m7, m8, m9,
+          align=TRUE, type="text",
+          title = "Regression Estimates, Inadequate Housing",
+          keep=c("Constant","pop_bel_1k","pop_1k_2.5k","pop_2.5k_10k","pop_10k_50k","pop_50k_200k",
+                 "pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
+                 "pop_50k_200k:time", "time"),
+          omit.stat = c("f","adj.rsq", "ser"),
+          column.sep.width = "1pt", 
+          font.size="scriptsize",
+          float.env="sidewaystable",
+          column.labels = c("Total Sample", "Homeowners", "Renters"),
+          column.separate = c(3,3,3),
+          notes = "Reference category: Population > 200,000",
+          add.lines = list(c("Weights", "No", "No", "Yes", "No", "No", "Yes", "No", "No", "Yes"),
+                           c("Controls", "No", "Yes", "Yes", "No", "Yes", "Yes", "No", "Yes", "Yes")))
+
+```
+
+```{r}
+# get summary statistics: group by year-tenure type
+
+vars.of.int <- c("tot.hh", "inadq.pc", "unsuit.pc", "unafford.pc", "inadq",
+                 "unsuit", "unafford")
+
+stats <- c("mean(x)", "sd(x)", "min(x)", "median(x)", "max(x)", "notNA(x)")
+stats.label <- c("Mean", "Std. Dev.", "Min", "Median", "Max", "Obs.")
+
+sumtable(df.no.nas, vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="browser")
+```
 
 ```{r}
 # Distributions of the rates of the housing indicators
 
 ## Unaffordable housing
 hist.d <- df.no.nas[(df.no.nas$Tenure == "Total"),]
-hist(hist.d$unafford.pc, main="Total Sample, unafford.pc") # need to separate by tenure type
+hist.d %>% ggplot(aes(x=unafford.pc)) + 
+  geom_histogram(position="identity", fill="orange") + 
+  ggtitle("Distribution, Total Sample")
 
-hist.d <- df.no.nas[(df.no.nas$Tenure == "Owner"),]
-hist(hist.d$unafford.pc, main="Owner Sample, unafford.pc")
-
-hist.d <- df.no.nas[(df.no.nas$Tenure == "Renter"),]
-hist(hist.d$unafford.pc, main="Renter Sample, unafford.pc")
-
-```
-
-```{r}
+hist.d <- df.no.nas[(df.no.nas$Tenure == "Owner") | (df.no.nas$Tenure == "Renter"),]
+hist.d %>% ggplot(aes(x=unafford.pc, fill=Tenure)) + geom_histogram(alpha=0.6, position="identity") + ggtitle("Distribution, Owner & Renter")
 
 ```
+
+
 
 
 ```{r}
