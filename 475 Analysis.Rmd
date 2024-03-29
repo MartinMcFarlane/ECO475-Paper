@@ -21,6 +21,7 @@ library(stringi)
 library(estimatr)
 library(stargazer)
 library(sandwich)
+library(ggpubr)
 
 
 ```
@@ -307,7 +308,12 @@ prov.ests <- prov.ests16 %>% rbind(prov.ests21)
 prov.ests$year <- as.character(prov.ests$year)
 
 ## Plot bars with conf intervals
-ggplot(prov.ests, aes(x=prov, y=fit, fill=year)) +
+ggplot(prov.ests, aes(x=factor(prov, provs), y=fit, fill=year)) +
+  labs(title = "Prominent declines in unaffordable housing in the largest provinces",
+       subtitle = "Estimates of mean unaffordable housing rate, weighted by 2016 population",
+       x = "Province",
+       y = "Percent",
+       fill = "Year") +
   geom_bar(stat="identity", position="dodge") +
   geom_errorbar(aes(x=prov, ymin=lwr, ymax=upr), colour="black", position="dodge")
 
@@ -360,8 +366,15 @@ pop.ests21 <- pop.ests21 %>% cbind(predictions)
 pop.ests <- pop.ests16 %>% rbind(pop.ests21)
 pop.ests$year <- as.character(pop.ests$year)
 
+pop_order <- c("Below 1000", "1000 to 2500","2500 to 10,000","10,000 to 50,000",
+               "50,000 to 200,000", "over 200,000")
+
 ## Plot bars with conf intervals
-ggplot(pop.ests, aes(x=pop.bin, y=fit, fill=year)) +
+ggplot(pop.ests, aes(x=factor(pop.bin, pop_order), y=fit, fill=year)) +
+  labs(title = "Proportions in Unaffordable housing declining across subdivisions",
+       subtitle = "Unconditional estimates of mean unaffordable housing rate",
+       x = "Population Size", 
+       y = "Percent", fill = "Year") +
   geom_bar(stat="identity", position="dodge") +
   geom_errorbar(aes(x=pop.bin, ymin=lwr, ymax=upr), colour="black", position="dodge")
 ```
@@ -566,7 +579,7 @@ m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se1 <- vcovHC(m1, type="HC0") %>% diag() %>% sqrt()
+r.se1 <- vcovHC(m1, type="HC2") %>% diag() %>% sqrt()
 
 #### Total, w/ controls
 m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
@@ -576,7 +589,7 @@ m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se2 <- vcovHC(m2, type="HC0") %>% diag() %>% sqrt()
+r.se2 <- vcovHC(m2, type="HC2") %>% diag() %>% sqrt()
 
 
 #### Total, w/ base controls and adl COVID-19 controls
@@ -587,14 +600,14 @@ m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se3 <- vcovHC(m3, type="HC0") %>% diag() %>% sqrt()
+r.se3 <- vcovHC(m3, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, no controls
 m4 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se4 <- vcovHC(m4, type="HC0") %>% diag() %>% sqrt()
+r.se4 <- vcovHC(m4, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, w/ controls
 m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -604,7 +617,7 @@ m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se5 <- vcovHC(m5, type="HC0") %>% diag() %>% sqrt()
+r.se5 <- vcovHC(m5, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, w/ base controls and adl COVID-19 controls
 m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -614,14 +627,14 @@ m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se6 <- vcovHC(m6, type="HC0") %>% diag() %>% sqrt()
+r.se6 <- vcovHC(m6, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, no controls
 m7 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se7 <- vcovHC(m7, type="HC0") %>% diag() %>% sqrt()
+r.se7 <- vcovHC(m7, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, w/ controls
 m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -631,7 +644,7 @@ m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se8 <- vcovHC(m8, type="HC0") %>% diag() %>% sqrt()
+r.se8 <- vcovHC(m8, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, w/ base controls and adl COVID-19 controls
 m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -641,7 +654,7 @@ m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se9 <- vcovHC(m9, type="HC0") %>% diag() %>% sqrt()
+r.se9 <- vcovHC(m9, type="HC2") %>% diag() %>% sqrt()
 
 models <- list(m1,m2,m3,m4,m5,m6,m7,m8,m9)
 
@@ -674,7 +687,7 @@ m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
   lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se1 <- vcovHC(m1, type="HC0") %>% diag() %>% sqrt()
+r.se1 <- vcovHC(m1, type="HC2") %>% diag() %>% sqrt()
 
 #### Total, w/ controls
 m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
@@ -684,7 +697,7 @@ m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se2 <- vcovHC(m2, type="HC0") %>% diag() %>% sqrt()
+r.se2 <- vcovHC(m2, type="HC2") %>% diag() %>% sqrt()
 
 
 #### Total, w/ base controls and adl COVID-19 controls
@@ -695,14 +708,14 @@ m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se3 <- vcovHC(m3, type="HC0") %>% diag() %>% sqrt()
+r.se3 <- vcovHC(m3, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, no controls
 m4 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
   lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se4 <- vcovHC(m4, type="HC0") %>% diag() %>% sqrt()
+r.se4 <- vcovHC(m4, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, w/ controls
 m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -712,7 +725,7 @@ m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se5 <- vcovHC(m5, type="HC0") %>% diag() %>% sqrt()
+r.se5 <- vcovHC(m5, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, w/ base controls and adl COVID-19 controls
 m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -722,14 +735,14 @@ m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se6 <- vcovHC(m6, type="HC0") %>% diag() %>% sqrt()
+r.se6 <- vcovHC(m6, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, no controls
 m7 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
   lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se7 <- vcovHC(m7, type="HC0") %>% diag() %>% sqrt()
+r.se7 <- vcovHC(m7, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, w/ controls
 m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -739,7 +752,7 @@ m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se8 <- vcovHC(m8, type="HC0") %>% diag() %>% sqrt()
+r.se8 <- vcovHC(m8, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, w/ base controls and adl COVID-19 controls
 m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -749,7 +762,7 @@ m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se9 <- vcovHC(m9, type="HC0") %>% diag() %>% sqrt()
+r.se9 <- vcovHC(m9, type="HC2") %>% diag() %>% sqrt()
 
 models <- list(m1,m2,m3,m4,m5,m6,m7,m8,m9)
 
@@ -785,7 +798,7 @@ m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
   lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se1 <- vcovHC(m1, type="HC0") %>% diag() %>% sqrt()
+r.se1 <- vcovHC(m1, type="HC2") %>% diag() %>% sqrt()
 
 #### Total, w/ controls
 m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
@@ -795,7 +808,7 @@ m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se2 <- vcovHC(m2, type="HC0") %>% diag() %>% sqrt()
+r.se2 <- vcovHC(m2, type="HC2") %>% diag() %>% sqrt()
 
 
 #### Total, w/ base controls and adl COVID-19 controls
@@ -806,14 +819,14 @@ m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se3 <- vcovHC(m3, type="HC0") %>% diag() %>% sqrt()
+r.se3 <- vcovHC(m3, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, no controls
 m4 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
   lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se4 <- vcovHC(m4, type="HC0") %>% diag() %>% sqrt()
+r.se4 <- vcovHC(m4, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, w/ controls
 m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -823,7 +836,7 @@ m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se5 <- vcovHC(m5, type="HC0") %>% diag() %>% sqrt()
+r.se5 <- vcovHC(m5, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, w/ base controls and adl COVID-19 controls
 m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -833,14 +846,14 @@ m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se6 <- vcovHC(m6, type="HC0") %>% diag() %>% sqrt()
+r.se6 <- vcovHC(m6, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, no controls
 m7 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
   lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
        time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k)
 
-r.se7 <- vcovHC(m7, type="HC0") %>% diag() %>% sqrt()
+r.se7 <- vcovHC(m7, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, w/ controls
 m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -850,7 +863,7 @@ m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se8 <- vcovHC(m8, type="HC0") %>% diag() %>% sqrt()
+r.se8 <- vcovHC(m8, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, w/ base controls and adl COVID-19 controls
 m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -860,7 +873,7 @@ m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se9 <- vcovHC(m9, type="HC0") %>% diag() %>% sqrt()
+r.se9 <- vcovHC(m9, type="HC2") %>% diag() %>% sqrt()
 
 models <- list(m1,m2,m3,m4,m5,m6,m7,m8,m9)
 
@@ -886,6 +899,131 @@ stargazer(m1, m2, m3, m4, m5, m6,
                            c("Controls", "No", "Yes", "Yes", "No", "Yes", "Yes", "No", "Yes", "Yes")))
 
 ```
+
+```{r}
+# Presentation table: regression results for full control set, split by tenure, for all vars
+
+## UNAFFORDABLE HOUSING
+#### Total, w/ base controls and adl COVID-19 controls
+m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se1 <- vcovHC(m1, type="HC2") %>% diag() %>% sqrt()
+
+#### Owner, w/ base controls and adl COVID-19 controls
+m2 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se2 <- vcovHC(m2, type="HC2") %>% diag() %>% sqrt()
+
+#### Renter, w/ base controls and adl COVID-19 controls
+m3 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unafford.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se3 <- vcovHC(m3, type="HC2") %>% diag() %>% sqrt()
+
+## INADEQUATE HOUSING
+#### Total, w/ base controls and adl COVID-19 controls
+m4 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se4 <- vcovHC(m4, type="HC2") %>% diag() %>% sqrt()
+
+#### Owner, w/ base controls and adl COVID-19 controls
+m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se5 <- vcovHC(m5, type="HC2") %>% diag() %>% sqrt()
+
+#### Renter, w/ base controls and adl COVID-19 controls
+m6 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = inadq.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se6 <- vcovHC(m6, type="HC2") %>% diag() %>% sqrt()
+
+
+## UNSUITABLE HOUSING
+#### Total, w/ base controls and adl COVID-19 controls
+m7 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se7 <- vcovHC(m7, type="HC2") %>% diag() %>% sqrt()
+
+#### Owner, w/ base controls and adl COVID-19 controls
+m8 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se8 <- vcovHC(m8, type="HC2") %>% diag() %>% sqrt()
+
+#### Renter, w/ base controls and adl COVID-19 controls
+m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
+  lm(formula = unsuit.pc ~ pop_bel_1k + pop_1k_2.5k + pop_2.5k_10k + pop_10k_50k + pop_abv_200k + time +
+       time*pop_bel_1k + time*pop_1k_2.5k + time*pop_2.5k_10k + time*pop_10k_50k + time*pop_abv_200k +
+       med_at_inc + bel_lico + non_cdn + he_highschool + he_postsec + unemp + married +
+       marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
+       age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
+
+r.se9 <- vcovHC(m9, type="HC2") %>% diag() %>% sqrt()
+
+# BUILD TABLE
+robust.se <- list(r.se1, r.se2, r.se3, r.se4, r.se5, r.se6, r.se7, r.se8, r.se9)
+
+
+stargazer(m1, m2, m3, m4, m5, m6, 
+          m7, m8, m9,
+          se = robust.se,
+          align=TRUE, type="latex",
+          title = "Regression Estimates By Tenure",
+          keep=c("pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
+                 "pop_abv_200k:time", "time"),
+          omit.stat = c("f","adj.rsq", "ser"),
+          column.sep.width = "1pt", 
+          font.size="scriptsize",
+          float.env="sidewaystable",
+          covariate.labels = c("Time", "Below 1000 * Time", "1000 to 2500 * Time", "2500 to 10,000 * Time",
+                               "10,000 to 50,000 * Time", "Above 200,000 * Time"),
+          column.labels = c("Total", "Owners", "Renters","Total", "Owners", "Renters",
+                            "Total", "Owners", "Renters"),
+          dep.var.labels = c("Unaffordable Housing", "Inadequate Housing", "Unsuitable Housing"),
+          column.separate = c(1,1,1,1,1,1,1,1,1),
+          notes = "Reference category: Population between 50K and 200K",
+          add.lines = list(c("COVID-19 Controls", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
+                           c("Base Controls", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes")))
+
+```
+
 
 ```{r}
 # Are results robust to binning? Trying under 65K/over 65K bins like in F&K 2013
@@ -918,7 +1056,7 @@ for (var in city_params){
 m1 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_65k + time + time*pop_bel_65k)
 
-r.se1 <- vcovHC(m1, type="HC0") %>% diag() %>% sqrt()
+r.se1 <- vcovHC(m1, type="HC2") %>% diag() %>% sqrt()
 
 #### Total, w/ controls
 m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
@@ -927,7 +1065,7 @@ m2 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se2 <- vcovHC(m2, type="HC0") %>% diag() %>% sqrt()
+r.se2 <- vcovHC(m2, type="HC2") %>% diag() %>% sqrt()
 
 #### Total, w/ Base controls & COVID controls
 m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>% 
@@ -936,13 +1074,13 @@ m3 <- df.no.nas[(df.no.nas$Tenure == "Total"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se3 <- vcovHC(m3, type="HC0") %>% diag() %>% sqrt()
+r.se3 <- vcovHC(m3, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, no controls
 m4 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_65k + time + time*pop_bel_65k)
 
-r.se4 <- vcovHC(m4, type="HC0") %>% diag() %>% sqrt()
+r.se4 <- vcovHC(m4, type="HC2") %>% diag() %>% sqrt()
 
 #### Owner, w/ controls
 m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -951,7 +1089,7 @@ m5 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se5 <- vcovHC(m5, type="HC0") %>% diag() %>% sqrt()
+r.se5 <- vcovHC(m5, type="HC2") %>% diag() %>% sqrt()
 
 #### Owners, base & COVID controls
 m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>% 
@@ -960,13 +1098,13 @@ m6 <- df.no.nas[(df.no.nas$Tenure == "Owner"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se6 <- vcovHC(m6, type="HC0") %>% diag() %>% sqrt()
+r.se6 <- vcovHC(m6, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, no controls
 m7 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
   lm(formula = unafford.pc ~ pop_bel_65k + time + time*pop_bel_65k)
 
-r.se7 <- vcovHC(m7, type="HC0") %>% diag() %>% sqrt()
+r.se7 <- vcovHC(m7, type="HC2") %>% diag() %>% sqrt()
 
 #### Renter, w/ controls
 m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -975,7 +1113,7 @@ m8 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov))
 
-r.se8 <- vcovHC(m8, type="HC0") %>% diag() %>% sqrt()
+r.se8 <- vcovHC(m8, type="HC2") %>% diag() %>% sqrt()
 
 #### Renters, base & COVID controls
 m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>% 
@@ -984,7 +1122,7 @@ m9 <- df.no.nas[(df.no.nas$Tenure == "Renter"),] %>%
        marr_w_child + age_15to24 + age_25to34 + age_35to44 + age_45to54 + age_55to64 +
        age_65to74 + age_75to84 + age_85_plus + factor(prov) + av_cov19aid + cov19aid.pc)
 
-r.se9 <- vcovHC(m9, type="HC0") %>% diag() %>% sqrt()
+r.se9 <- vcovHC(m9, type="HC2") %>% diag() %>% sqrt()
 
 robust.se <- list(r.se1, r.se2, r.se3, r.se4, r.se5, r.se6, r.se7, r.se8, r.se9)
 
@@ -1012,44 +1150,64 @@ stargazer(m1, m2, m3, m4, m5, m6, m7, m8, m9,
 ```{r}
 # get summary statistics: group by year-tenure type
 
-vars.of.int <- c("tot.hh", "inadq.pc", "unsuit.pc", "unafford.pc", "inadq",
-                 "unsuit", "unafford")
+vars.of.int <- c("tot.hh", "inadq.pc", "unsuit.pc", "unafford.pc")
 
 stats <- c("mean(x)", "sd(x)", "min(x)", "median(x)", "max(x)", "notNA(x)")
 stats.label <- c("Mean", "Std. Dev.", "Min", "Median", "Max", "Obs.")
 
-sumtable(df.no.nas, vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="browser")
+sumtable(df.no.nas[df.no.nas$Tenure == "Total",], vars=vars.of.int, summ=stats, summ.names=stats.label, group="Tenure", out="latexpage") 
+# NOTE: This only looks at total part of sample because I changed it for
+# presentation.
 ```
 
 ```{r}
 # Distributions of the rates of the housing indicators
 
+f_path = "C:/Users/marti/Documents/GitHub/ECO475-Paper/Output" # for storing output
+
 ## Unaffordable housing
 hist.d <- df.no.nas[(df.no.nas$Tenure == "Total"),]
-hist.d %>% ggplot(aes(x=unafford.pc)) + 
-  geom_histogram(position="identity", fill="orange") + 
-  ggtitle("Unaffordable Housing Distribution, Total Sample")
+hist.d %>% ggplot(aes(x=unafford.pc)) +
+  geom_histogram(position="identity", fill="orange", binwidth = 3) +
+  ggtitle("Unaffordable Housing Distribution, Total Sample") + xlab("Unaffordable Housing (%)")
 
 hist.d <- df.no.nas[(df.no.nas$Tenure == "Owner") | (df.no.nas$Tenure == "Renter"),]
-hist.d %>% ggplot(aes(x=unafford.pc, fill=Tenure)) + geom_histogram(alpha=0.6, position="identity") + ggtitle("Unaffordable Housing Distribution, Owner & Renter")
+graph1 <- hist.d %>% ggplot(aes(x=unafford.pc, fill=Tenure)) + geom_histogram(alpha=0.6, position="identity", binwidth = 3) + ggtitle("Unaffordable Housing Distribution, Owner & Renter") + xlab("Unaffordable Housing (%)")
 
 ## Unsuitable housing
 hist.d <- df.no.nas[(df.no.nas$Tenure == "Total"),]
-hist.d %>% ggplot(aes(x=unsuit.pc)) + 
-  geom_histogram(position="identity", fill="orange") + 
-  ggtitle("Unsuitable Housing Distribution, Total Sample")
+hist.d %>% ggplot(aes(x=unsuit.pc)) +
+  geom_histogram(position="identity", fill="orange", binwidth = 3) +
+  ggtitle("Unsuitable Housing Distribution, Total Sample") + xlab("Unsuitable Housing (%)")
 
 hist.d <- df.no.nas[(df.no.nas$Tenure == "Owner") | (df.no.nas$Tenure == "Renter"),]
-hist.d %>% ggplot(aes(x=unsuit.pc, fill=Tenure)) + geom_histogram(alpha=0.6, position="identity") + ggtitle("Unsuitable Housing Distribution, Owner & Renter")
+graph2 <- hist.d %>% ggplot(aes(x=unsuit.pc, fill=Tenure)) + geom_histogram(alpha=0.6, position="identity", binwidth = 3) + ggtitle("Unsuitable Housing Distribution, Owner & Renter") + xlab("Unsuitable Housing (%)")
+
+
 
 ## Inadequate housing
 hist.d <- df.no.nas[(df.no.nas$Tenure == "Total"),]
-hist.d %>% ggplot(aes(x=inadq.pc)) + 
-  geom_histogram(position="identity", fill="orange") + 
-  ggtitle("Inadequate Housing Distribution, Total Sample")
+hist.d %>% ggplot(aes(x=inadq.pc)) +
+  geom_histogram(position="identity", fill="orange", binwidth = 3) +
+  ggtitle("Inadequate Housing Distribution, Total Sample") + xlab("Inadequate Housing (%)")
 
 hist.d <- df.no.nas[(df.no.nas$Tenure == "Owner") | (df.no.nas$Tenure == "Renter"),]
-hist.d %>% ggplot(aes(x=inadq.pc, fill=Tenure)) + geom_histogram(alpha=0.6, position="identity") + ggtitle("Inadequate Housing Distribution, Owner & Renter")
+graph3 <- hist.d %>% ggplot(aes(x=inadq.pc, fill=Tenure)) + geom_histogram(alpha=0.6, position="identity", binwidth = 3) + ggtitle("Inadequate Housing Distribution, Owner & Renter") + xlab("Inadequate Housing (%)")
+
+
+ggarrange(graph1, graph2, graph3, nrow = 2, ncol = 2)
+ggsave(filename = "dists.png", width = 40, height = 20, units = "cm", path = f_path)
+
+```
+
+
+```{r}
+# Summary Statistics for dependent variables
+
+## Total Sample
+df_subset <- df.no.nas
+
+stargazer(df_subset, type = "text")
 
 ```
 
