@@ -308,7 +308,7 @@ prov.ests <- prov.ests16 %>% rbind(prov.ests21)
 prov.ests$year <- as.character(prov.ests$year)
 
 ## Plot bars with conf intervals
-ggplot(prov.ests, aes(x=factor(prov, provs), y=fit, fill=year)) +
+unafford.by.prov <- ggplot(prov.ests, aes(x=factor(prov, provs), y=fit, fill=year)) +
   labs(title = "Prominent declines in unaffordable housing in the largest provinces",
        subtitle = "Estimates of mean unaffordable housing rate, weighted by 2016 population",
        x = "Province",
@@ -317,7 +317,14 @@ ggplot(prov.ests, aes(x=factor(prov, provs), y=fit, fill=year)) +
   geom_bar(stat="identity", position="dodge") +
   geom_errorbar(aes(x=prov, ymin=lwr, ymax=upr), colour="black", position="dodge")
 
+unafford.by.prov
+
 ```
+
+
+
+
+
 
 ```{r}
 # Relative frequency of population bins by province
@@ -338,6 +345,29 @@ df.gb <- df.gb %>% mutate(rel.frq = n / Total)
 # make plot
 df.gb %>% ggplot(aes(x=prov, y=rel.frq, fill=pop.bin)) + geom_bar(stat="identity", position="fill") #LATER: Order by west to east, population
 ```
+
+```{r}
+# Relative frequency of population bins by Tenure
+#df.gb <- df.no.nas[df.no.nas$Tenure == "Total", c("prov", "pop.bin")] %>% 
+#  group_by(prov, pop.bin) %>% summarise(count = n())
+df.gb <- df.no.nas[(df.no.nas$Tenure != "Total"),c("Tenure", "pop.bin")] %>% 
+  count(Tenure, pop.bin)
+# calculate relative frequencies
+df.gb$Total <- NA
+for (tenure_type in c("Owner", "Renter")){
+  tenure_total <- df.gb[df.gb$Tenure == tenure_type, "n"] %>% sum()
+  df.gb[df.gb$Tenure == tenure_type, "Total"] <- tenure_total
+}
+df.gb <- df.gb %>% mutate(rel.frq = n / Total)
+
+
+# make plot
+pop_order <- c("over 200,000", "50,000 to 200,000","10,000 to 50,000", 
+               "2500 to 10,000", "1000 to 2500", "Below 1000")
+
+df.gb %>% ggplot(aes(x=Tenure, y=rel.frq, fill=factor(pop.bin, pop_order))) + geom_bar(stat="identity", position="fill") 
+```
+
 
 ```{r}
 ## Regress indicators in 2016 and 2021 separately by Population Bin (Unfinished) 
@@ -370,14 +400,101 @@ pop_order <- c("Below 1000", "1000 to 2500","2500 to 10,000","10,000 to 50,000",
                "50,000 to 200,000", "over 200,000")
 
 ## Plot bars with conf intervals
-ggplot(pop.ests, aes(x=factor(pop.bin, pop_order), y=fit, fill=year)) +
+unafford.by.pop <- ggplot(pop.ests, aes(x=factor(pop.bin, pop_order), y=fit, fill=year)) +
   labs(title = "Proportions in Unaffordable housing declining across subdivisions",
        subtitle = "Unconditional estimates of mean unaffordable housing rate",
        x = "Population Size", 
        y = "Percent", fill = "Year") +
   geom_bar(stat="identity", position="dodge") +
   geom_errorbar(aes(x=pop.bin, ymin=lwr, ymax=upr), colour="black", position="dodge")
+
+unafford.by.pop
 ```
+
+```{r}
+# Repeat graph for remaining two indicators
+
+## INADEQUATE HOUSING
+
+df.fltrd <- df.no.nas[(df.no.nas$Year == 2016) & (df.no.nas$Tenure == "Total"),]
+ml.pop16 <- df.fltrd %>%
+  lm(formula = inadq.pc ~ factor(pop.bin))
+
+df.fltrd <- df.no.nas[(df.no.nas$Year == 2021) & (df.no.nas$Tenure == "Total"),]
+ml.pop21 <- df.fltrd %>%
+  lm(formula = inadq.pc ~ factor(pop.bin))
+  
+## Build dataframe: pop.bin-year, expectation, confidence interval
+popbins <- c(unique(df.fltrd$pop.bin))
+
+pop.ests16 <- data.frame(pop.bin=popbins, year=2016)
+predictions <- predict.lm(ml.pop16, newdata=pop.ests16, interval="confidence")
+pop.ests16 <- pop.ests16 %>% cbind(predictions)
+
+pop.ests21 <- data.frame(pop.bin=popbins, year=2021)
+predictions <- predict.lm(ml.pop21, newdata=pop.ests21, interval="confidence")
+pop.ests21 <- pop.ests21 %>% cbind(predictions)
+
+pop.ests <- pop.ests16 %>% rbind(pop.ests21)
+pop.ests$year <- as.character(pop.ests$year)
+
+pop_order <- c("Below 1000", "1000 to 2500","2500 to 10,000","10,000 to 50,000",
+               "50,000 to 200,000", "over 200,000")
+
+## Plot bars with conf intervals
+inadq.by.pop <- ggplot(pop.ests, aes(x=factor(pop.bin, pop_order), y=fit, fill=year)) +
+  labs(title = "Canada's smallest communities face higher proportions of Inadequate housing",
+       subtitle = "Unconditional estimates of mean inadequate housing rate",
+       x = "Population Size", 
+       y = "Percent", fill = "Year") +
+  geom_bar(stat="identity", position="dodge") +
+  geom_errorbar(aes(x=pop.bin, ymin=lwr, ymax=upr), colour="black", position="dodge")
+
+inadq.by.pop
+
+
+```
+
+```{r}
+## UNSUITABLE HOUSING
+
+df.fltrd <- df.no.nas[(df.no.nas$Year == 2016) & (df.no.nas$Tenure == "Total"),]
+ml.pop16 <- df.fltrd %>%
+  lm(formula = unsuit.pc ~ factor(pop.bin))
+
+df.fltrd <- df.no.nas[(df.no.nas$Year == 2021) & (df.no.nas$Tenure == "Total"),]
+ml.pop21 <- df.fltrd %>%
+  lm(formula = unsuit.pc ~ factor(pop.bin))
+  
+## Build dataframe: pop.bin-year, expectation, confidence interval
+popbins <- c(unique(df.fltrd$pop.bin))
+
+pop.ests16 <- data.frame(pop.bin=popbins, year=2016)
+predictions <- predict.lm(ml.pop16, newdata=pop.ests16, interval="confidence")
+pop.ests16 <- pop.ests16 %>% cbind(predictions)
+
+pop.ests21 <- data.frame(pop.bin=popbins, year=2021)
+predictions <- predict.lm(ml.pop21, newdata=pop.ests21, interval="confidence")
+pop.ests21 <- pop.ests21 %>% cbind(predictions)
+
+pop.ests <- pop.ests16 %>% rbind(pop.ests21)
+pop.ests$year <- as.character(pop.ests$year)
+
+pop_order <- c("Below 1000", "1000 to 2500","2500 to 10,000","10,000 to 50,000",
+               "50,000 to 200,000", "over 200,000")
+
+## Plot bars with conf intervals
+unsuit.by.pop <- ggplot(pop.ests, aes(x=factor(pop.bin, pop_order), y=fit, fill=year)) +
+  labs(title = "Unsuitable housing is concentrated in Canada's largest and smallest centres",
+       subtitle = "Unconditional estimates of mean unsuitable housing rate",
+       x = "Population Size", 
+       y = "Percent", fill = "Year") +
+  geom_bar(stat="identity", position="dodge") +
+  geom_errorbar(aes(x=pop.bin, ymin=lwr, ymax=upr), colour="black", position="dodge")
+
+unsuit.by.pop
+```
+
 
 ```{r}
 # Regression analysis using OLS model - housing indicators ~ pop size, covar's
@@ -1004,7 +1121,7 @@ robust.se <- list(r.se1, r.se2, r.se3, r.se4, r.se5, r.se6, r.se7, r.se8, r.se9)
 stargazer(m1, m2, m3, m4, m5, m6, 
           m7, m8, m9,
           se = robust.se,
-          align=TRUE, type="latex",
+          align=TRUE, type="text",
           title = "Regression Estimates By Tenure",
           keep=c("pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
                  "pop_abv_200k:time", "time"),
@@ -1012,8 +1129,8 @@ stargazer(m1, m2, m3, m4, m5, m6,
           column.sep.width = "1pt", 
           font.size="scriptsize",
           float.env="sidewaystable",
-          covariate.labels = c("Time", "Below 1000 * Time", "1000 to 2500 * Time", "2500 to 10,000 * Time",
-                               "10,000 to 50,000 * Time", "Above 200,000 * Time"),
+          #covariate.labels = c("Time", "Below 1000 * Time", "1000 to 2500 * Time", "2500 to 10,000 * Time",
+          #                     "10,000 to 50,000 * Time", "Above 200,000 * Time"),
           column.labels = c("Total", "Owners", "Renters","Total", "Owners", "Renters",
                             "Total", "Owners", "Renters"),
           dep.var.labels = c("Unaffordable Housing", "Inadequate Housing", "Unsuitable Housing"),
@@ -1023,6 +1140,35 @@ stargazer(m1, m2, m3, m4, m5, m6,
                            c("Base Controls", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes")))
 
 ```
+
+```{r}
+# Build table above including population coefficients (for appendix)
+
+stargazer(m1, m2, m3, m4, m5, m6, 
+          m7, m8, m9,
+          se = robust.se,
+          align=TRUE, type="text",
+          title = "Regression Estimates By Tenure",
+          keep=c("pop_bel_1k:time","pop_1k_2.5k:time","pop_2.5k_10k:time","pop_10k_50k:time",
+                 "pop_abv_200k:time", "time", "pop_bel_1k", "pop_1k_2.5k", "pop_2.5k_10k", 
+                 "pop_10k_50k", "pop_abv_200k"),
+          omit.stat = c("f","adj.rsq", "ser"),
+          column.sep.width = "1pt", 
+          font.size="scriptsize",
+          float.env="sidewaystable",
+          covariate.labels = c("Below 1000", "1000 to 2500", "2500 to 10,000", "10,000 to 50,000", 
+                               "Above 200,000", "Time", "Below 1000 * Time", "1000 to 2500 * Time", 
+                               "2500 to 10,000 * Time", "10,000 to 50,000 * Time", 
+                               "Above 200,000 * Time"),
+          column.labels = c("Total", "Owners", "Renters","Total", "Owners", "Renters",
+                            "Total", "Owners", "Renters"),
+          dep.var.labels = c("Unaffordable Housing", "Inadequate Housing", "Unsuitable Housing"),
+          column.separate = c(1,1,1,1,1,1,1,1,1),
+          notes = "Reference category: Population between 50K and 200K",
+          add.lines = list(c("COVID-19 Controls", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"),
+                           c("Base Controls", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes", "Yes")))
+```
+
 
 
 ```{r}
@@ -1200,6 +1346,13 @@ ggsave(filename = "dists.png", width = 40, height = 20, units = "cm", path = f_p
 
 ```
 
+```{r}
+# Combine unaffordable housing graphs by population and province
+ggarrange(unafford.by.pop, unafford.by.prov, nrow = 1, ncol = 2)
+ggsave(filename = "unafford_ests.png", width = 40, height = 15, units = "cm", path = f_path)
+
+```
+
 
 ```{r}
 # Summary Statistics for dependent variables
@@ -1214,7 +1367,7 @@ stargazer(df_subset, type = "text")
 
 ```{r}
 # Summary Statistics for controls; segmented by Tenure
-vars.of.int <- c("pop_dens", "married", "marr_w_child", "unafford.pc", "cov19aid.pc",
+vars.of.int <- c("pop_dens", "married", "marr_w_child", "cov19aid.pc",
                  "av_cov19aid", "med_at_inc","bel_lico","age_15to24","age_25to34","age_35to44",
                  "age_45to54", "age_55to64", "age_65to74", "age_75to84", "age_85_plus", "non_cdn",
                  "he_highschool", "he_postsec", "unemp")
