@@ -343,7 +343,12 @@ df.gb <- df.gb %>% mutate(rel.frq = n / Total)
 
 
 # make plot
-df.gb %>% ggplot(aes(x=prov, y=rel.frq, fill=pop.bin)) + geom_bar(stat="identity", position="fill") #LATER: Order by west to east, population
+pop_order <- c("over 200,000", "50,000 to 200,000","10,000 to 50,000", 
+               "2500 to 10,000", "1000 to 2500", "Below 1000")
+
+df.gb %>% ggplot(aes(x=factor(prov, provs), y=rel.frq, fill=factor(pop.bin, pop_order))) + 
+  geom_bar(stat="identity", position="fill") +
+  labs(x = "Province", y = "Relative Frequency", fill = "Population")#LATER: Order by west to east, population
 ```
 
 ```{r}
@@ -365,7 +370,11 @@ df.gb <- df.gb %>% mutate(rel.frq = n / Total)
 pop_order <- c("over 200,000", "50,000 to 200,000","10,000 to 50,000", 
                "2500 to 10,000", "1000 to 2500", "Below 1000")
 
-df.gb %>% ggplot(aes(x=Tenure, y=rel.frq, fill=factor(pop.bin, pop_order))) + geom_bar(stat="identity", position="fill") 
+df.gb %>% ggplot(aes(x=Tenure, y=rel.frq, fill=factor(pop.bin, pop_order))) + 
+  geom_bar(stat="identity", position="fill") +
+  labs(title = "The homeowner sample is less concentrated into larger centres compared to renters",
+       subtitle = "Composition of census subdivision samples by population and tenure",
+       y = "Relative Frequency", fill = "Population")
 ```
 
 
@@ -1367,7 +1376,7 @@ stargazer(df_subset, type = "text")
 
 ```{r}
 # Summary Statistics for controls; segmented by Tenure
-vars.of.int <- c("pop_dens", "married", "marr_w_child", "cov19aid.pc",
+vars.of.int <- c("married", "marr_w_child", "cov19aid.pc",
                  "av_cov19aid", "med_at_inc","bel_lico","age_15to24","age_25to34","age_35to44",
                  "age_45to54", "age_55to64", "age_65to74", "age_75to84", "age_85_plus", "non_cdn",
                  "he_highschool", "he_postsec", "unemp")
